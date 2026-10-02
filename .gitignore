@@ -1,0 +1,13 @@
+# Node dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime / Persistence files
+backend/simulator_state.dat
+*.log
+
+# OS / System files
+.DS_Store
+Thumbs.db

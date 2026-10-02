@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MMSP — Advanced OS Memory Management Suite</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Benchmark Comparisons -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Bar & Hero Header -->
+        <header class="app-header">
+            <div class="logo-group">
+                <div class="logo-icon"><i class="fas fa-microchip"></i></div>
+                <div>
+                    <h1>Memory Management Simulator <span class="badge-v2">v2.5 Pro</span></h1>
+                    <p class="subtitle">B.Tech Capstone Project | High-Performance C CLI Engine & Interactive OS Workbench</p>
+                </div>
+            </div>
+            <div class="engine-status" id="engine-status">
+                <span class="status-dot online"></span> C Engine Active
+            </div>
+        </header>
+
+        <!-- Main Navigation Tabs -->
+        <nav class="nav-tabs">
+            <button class="nav-btn active" data-tab="tab-paging">
+                <i class="fas fa-file-invoice"></i> Page Replacement Simulator
+            </button>
+            <button class="nav-btn" data-tab="tab-contiguous">
+                <i class="fas fa-cubes"></i> Contiguous Partition Allocation
+            </button>
+            <button class="nav-btn" data-tab="tab-comparison">
+                <i class="fas fa-chart-line"></i> Benchmark & Belady's Anomaly
+            </button>
+            <button class="nav-btn" data-tab="tab-theory">
+                <i class="fas fa-book-open"></i> OS Theory & Documentation
+            </button>
+        </nav>
+
+        <!-- System Message Bar -->
+        <div class="status-banner" id="global-status-message">
+            <i class="fas fa-info-circle"></i> <span>System Ready. Select an algorithm and initialize memory frames to start simulation.</span>
+        </div>
+
+        <!-- TAB 1: PAGE REPLACEMENT SIMULATOR -->
+        <main id="tab-paging" class="tab-content active">
+            <!-- Global Config Row -->
+            <section class="card config-card">
+                <h2 class="card-title"><i class="fas fa-sliders-h"></i> System Configuration & Reference Setup</h2>
+                <div class="config-grid">
+                    <div class="input-group">
+                        <label for="totalMemory"><i class="fas fa-memory"></i> Total Memory (KB)</label>
+                        <input type="number" id="totalMemory" value="4096" min="128" step="128">
+                    </div>
+                    <div class="input-group">
+                        <label for="frameSize"><i class="fas fa-th-large"></i> Page / Frame Size (KB)</label>
+                        <input type="number" id="frameSize" value="64" min="1" step="8">
+                    </div>
+                    <div class="input-group">
+                        <label for="algorithm"><i class="fas fa-cogs"></i> Page Replacement Algorithm</label>
+                        <select id="algorithm">
+                            <option value="FIFO">FIFO (First In First Out)</option>
+                            <option value="LRU">LRU (Least Recently Used)</option>
+                            <option value="OPTIMAL">Optimal Page Replacement</option>
+                            <option value="CLOCK">Clock / Second Chance</option>
+                            <option value="LFU">LFU (Least Frequently Used)</option>
+                            <option value="MFU">MFU (Most Frequently Used)</option>
+                            <option value="MRU">MRU (Most Recently Used)</option>
+                            <option value="RANDOM">Random Replacement</option>
+                        </select>
+                    </div>
+                    <div class="input-group full-width">
+                        <label for="refStringInput"><i class="fas fa-list-ol"></i> Page Reference String (Comma Separated)</label>
+                        <div class="ref-input-wrapper">
+                            <input type="text" id="refStringInput" value="7, 0, 1, 2, 0, 3, 0, 4, 2, 3, 0, 3, 2, 1, 2, 0, 1, 7, 0, 1" placeholder="e.g. 1, 2, 3, 4, 1, 2, 5">
+                            <button id="gen-random-ref" class="secondary-btn-sm"><i class="fas fa-random"></i> Generate</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="action-row">
+                    <button id="init-btn" class="btn primary-btn"><i class="fas fa-power-off"></i> Initialize System</button>
+                    <div class="file-upload-inline">
+                        <input type="file" id="file-input" multiple style="display:none;">
+                        <button id="upload-trigger-btn" class="btn secondary-btn"><i class="fas fa-upload"></i> Upload Process File</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reference String Tape Visualizer -->
+            <section class="card tape-card">
+                <div class="tape-header">
+                    <h3><i class="fas fa-stream"></i> Reference Stream Tape</h3>
+                    <div class="playback-controls">
+                        <button id="prev-step-btn" class="btn ctrl-btn" disabled><i class="fas fa-step-backward"></i> Prev</button>
+                        <button id="play-pause-btn" class="btn ctrl-btn play-btn" disabled><i class="fas fa-play"></i> Auto Play</button>
+                        <button id="step-btn" class="btn ctrl-btn" disabled><i class="fas fa-step-forward"></i> Next Step</button>
+                        <button id="reset-btn" class="btn ctrl-btn danger-btn" disabled><i class="fas fa-redo"></i> Reset</button>
+                        <div class="speed-control">
+                            <label><i class="fas fa-tachometer-alt"></i></label>
+                            <select id="play-speed">
+                                <option value="1000">1x Speed</option>
+                                <option value="500">2x Speed</option>
+                                <option value="200">5x Speed</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div id="ref-tape" class="ref-tape-container">
+                    <p class="empty-state">Initialize system to build page reference sequence.</p>
+                </div>
+            </section>
+
+            <!-- Main Interactive Split View -->
+            <div class="simulation-workspace">
+                <!-- Left Column -->
+                <div class="col-left">
+                    <!-- Statistics Dashboard -->
+                    <div class="card stats-dashboard">
+                        <h3 class="card-title"><i class="fas fa-chart-pie"></i> Real-time Analytics</h3>
+                        <div class="stats-metrics">
+                            <div class="metric-box fault-box">
+                                <span class="metric-value" id="faults">0</span>
+                                <span class="metric-label"><i class="fas fa-exclamation-triangle"></i> Page Faults</span>
+                            </div>
+                            <div class="metric-box hit-box">
+                                <span class="metric-value" id="hits">0</span>
+                                <span class="metric-label"><i class="fas fa-check-circle"></i> Page Hits</span>
+                            </div>
+                            <div class="metric-box ratio-box">
+                                <span class="metric-value" id="hit-ratio">0%</span>
+                                <span class="metric-label"><i class="fas fa-percentage"></i> Hit Ratio</span>
+                            </div>
+                            <div class="metric-box time-box">
+                                <span class="metric-value" id="sim-step-count">0</span>
+                                <span class="metric-label"><i class="fas fa-clock"></i> Step Count</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Process Page Map & Table -->
+                    <div class="card page-table-card">
+                        <h3 class="card-title"><i class="fas fa-table"></i> Process Page Table</h3>
+                        <div class="table-responsive">
+                            <table class="page-table" id="page-table">
+                                <thead>
+                                    <tr>
+                                        <th>Page #</th>
+                                        <th>Frame #</th>
+                                        <th>Status</th>
+                                        <th>Ref Bit</th>
+                                        <th>Dirty</th>
+                                        <th>Access Freq</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="6" class="empty-state">No active process loaded.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column -->
+                <div class="col-right">
+                    <!-- Physical Memory Frame Matrix -->
+                    <div class="card ram-card">
+                        <div class="card-header-flex">
+                            <h3 class="card-title"><i class="fas fa-microchip"></i> Physical RAM Frames Matrix</h3>
+                            <div class="legend">
+                                <span><span class="dot free"></span> Free</span>
+                                <span><span class="dot allocated"></span> Allocated</span>
+                                <span><span class="dot hit"></span> Hit</span>
+                                <span><span class="dot fault"></span> Fault</span>
+                            </div>
+                        </div>
+                        <div id="memory-grid" class="physical-memory-grid">
+                            <div class="empty-state">Initialize memory system to render physical frames.</div>
+                        </div>
+                    </div>
+
+                    <!-- Event Console Log -->
+                    <div class="card log-card">
+                        <h3 class="card-title"><i class="fas fa-terminal"></i> Simulation Execution Log</h3>
+                        <div class="log-wrapper">
+                            <ul id="log" class="simulation-log">
+                                <li class="log-item info">System waiting for initialization...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 2: CONTIGUOUS ALLOCATION SIMULATOR -->
+        <main id="tab-contiguous" class="tab-content">
+            <section class="card config-card">
+                <h2 class="card-title"><i class="fas fa-cubes"></i> Contiguous Partition Memory Allocation</h2>
+                <div class="config-grid">
+                    <div class="input-group">
+                        <label for="alloc-process-id"><i class="fas fa-cube"></i> Process ID</label>
+                        <input type="text" id="alloc-process-id" value="P_A" placeholder="e.g. P1">
+                    </div>
+                    <div class="input-group">
+                        <label for="alloc-size"><i class="fas fa-weight-hanging"></i> Requested Size (KB)</label>
+                        <input type="number" id="alloc-size" value="400" min="64" step="64">
+                    </div>
+                    <div class="input-group">
+                        <label for="alloc-algorithm"><i class="fas fa-sitemap"></i> Allocation Strategy</label>
+                        <select id="alloc-algorithm">
+                            <option value="FIRST_FIT">First Fit</option>
+                            <option value="BEST_FIT">Best Fit</option>
+                            <option value="WORST_FIT">Worst Fit</option>
+                            <option value="NEXT_FIT">Next Fit</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="action-row">
+                    <button id="allocate-btn" class="btn primary-btn"><i class="fas fa-plus-circle"></i> Allocate Process</button>
+                    <button id="deallocate-btn" class="btn secondary-btn"><i class="fas fa-minus-circle"></i> Free Selected Process</button>
+                    <button id="reset-contiguous-btn" class="btn danger-btn"><i class="fas fa-redo"></i> Reset Partitions</button>
+                </div>
+            </section>
+
+            <div class="contiguous-workspace">
+                <div class="card partition-card">
+                    <h3 class="card-title"><i class="fas fa-layer-group"></i> Physical RAM Partition Blocks & Fragmentation</h3>
+                    <div id="partition-visualization" class="partition-container">
+                        <!-- Partition Blocks rendered dynamically -->
+                    </div>
+                </div>
+
+                <div class="card frag-summary-card">
+                    <h3 class="card-title"><i class="fas fa-chart-bar"></i> Memory Fragmentation Summary</h3>
+                    <div class="stats-metrics">
+                        <div class="metric-box">
+                            <span class="metric-value" id="internal-frag-val">0 KB</span>
+                            <span class="metric-label">Internal Fragmentation</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-value" id="external-frag-val">0 KB</span>
+                            <span class="metric-label">External Fragmentation</span>
+                        </div>
+                        <div class="metric-box">
+                            <span class="metric-value" id="allocated-space-val">0 KB</span>
+                            <span class="metric-label">Total Allocated Space</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 3: BENCHMARK & BELADY'S ANOMALY WORKBENCH -->
+        <main id="tab-comparison" class="tab-content">
+            <section class="card config-card">
+                <h2 class="card-title"><i class="fas fa-bolt"></i> Multi-Algorithm Benchmark Suite</h2>
+                <p class="section-desc">Run all 8 page replacement algorithms side-by-side on the exact same reference string to compare page fault frequency, hit ratios, and evaluate Belady's Anomaly.</p>
+                <div class="action-row">
+                    <button id="run-benchmark-btn" class="btn primary-btn"><i class="fas fa-play-circle"></i> Execute Multi-Algorithm Benchmark</button>
+                    <button id="test-belady-btn" class="btn secondary-btn"><i class="fas fa-vial"></i> Test Belady's Anomaly (FIFO 3 vs 4 Frames)</button>
+                </div>
+            </section>
+
+            <div class="benchmark-grid">
+                <div class="card chart-card">
+                    <h3 class="card-title"><i class="fas fa-chart-bar"></i> Page Faults Comparison Chart</h3>
+                    <div class="chart-container">
+                        <canvas id="benchmarkChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card table-card">
+                    <h3 class="card-title"><i class="fas fa-table"></i> Comparative Performance Matrix</h3>
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Page Hits</th>
+                                <th>Page Faults</th>
+                                <th>Hit Ratio (%)</th>
+                                <th>Evictions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="benchmark-table-body">
+                            <tr><td colspan="5" class="empty-state">Click "Execute Multi-Algorithm Benchmark" to run comparison.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- TAB 4: OS THEORY & DOCUMENTATION -->
+        <main id="tab-theory" class="tab-content">
+            <div class="theory-grid">
+                <div class="card theory-card">
+                    <h2><i class="fas fa-book"></i> Memory Management Fundamentals</h2>
+                    <p>In operating systems, <strong>Virtual Memory Management</strong> decouples logical process memory addresses from physical RAM address spaces using paged mapping tables, enabling execution of programs larger than physical memory.</p>
+
+                    <h3>1. Page Replacement Algorithms</h3>
+                    <ul>
+                        <li><strong>FIFO (First-In, First-Out):</strong> Evicts the page that was loaded earliest into memory. Simple to implement using a queue, but subject to <em>Belady's Anomaly</em>.</li>
+                        <li><strong>LRU (Least Recently Used):</strong> Evicts the page that has not been accessed for the longest period of time. Uses stack or timestamp counter.</li>
+                        <li><strong>Optimal (OPT):</strong> Evicts the page that will not be used for the longest period in the future. Theoretical benchmark algorithm (requires future knowledge).</li>
+                        <li><strong>Clock / Second Chance:</strong> Approximates LRU using a circular buffer and a reference bit. If the bit is 1, it gets reset to 0 (second chance); if 0, the page is evicted.</li>
+                        <li><strong>LFU (Least Frequently Used):</strong> Evicts the page with the lowest reference frequency count.</li>
+                        <li><strong>MFU (Most Frequently Used):</strong> Evicts the page with the highest reference count based on the heuristic that high frequency pages have already served their purpose.</li>
+                    </ul>
+
+                    <h3>2. Dynamic Partitioning Allocation</h3>
+                    <ul>
+                        <li><strong>First Fit:</strong> Allocates the process to the first free partition block large enough.</li>
+                        <li><strong>Best Fit:</strong> Allocates the process to the smallest partition block that is large enough, minimizing internal fragmentation.</li>
+                        <li><strong>Worst Fit:</strong> Allocates the process to the largest available partition block.</li>
+                        <li><strong>Next Fit:</strong> Variant of First Fit that begins searching from the location of the last allocation.</li>
+                    </ul>
+                </div>
+
+                <div class="card theory-card">
+                    <h2><i class="fas fa-calculator"></i> Algorithm Complexity Matrix</h2>
+                    <table class="benchmark-table">
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Time Complexity</th>
+                                <th>Space Complexity</th>
+                                <th>Hardware Support Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>FIFO</td><td>O(1)</td><td>O(Frames)</td><td>None</td></tr>
+                            <tr><td>LRU</td><td>O(1) with Hash+DLL</td><td>O(Frames)</td><td>Timestamp / Register</td></tr>
+                            <tr><td>Clock</td><td>O(Frames) worst</td><td>O(Frames)</td><td>Reference Bit</td></tr>
+                            <tr><td>LFU / MFU</td><td>O(log Frames) Heap</td><td>O(Pages)</td><td>Frequency Counter</td></tr>
+                            <tr><td>Optimal</td><td>O(String Length)</td><td>O(String)</td><td>Future Reference Vector</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
